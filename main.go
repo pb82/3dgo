@@ -229,10 +229,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// sort triangles from back to front
 	sort.Slice(g.trianglesToRaster, func(i, j int) bool {
-		t1 := g.trianglesToRaster[i]
-		t2 := g.trianglesToRaster[j]
-		z1 := (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3
-		z2 := (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3
+		z1 := (g.trianglesToRaster[i].p[0].z + g.trianglesToRaster[i].p[1].z + g.trianglesToRaster[i].p[2].z) / 3
+		z2 := (g.trianglesToRaster[j].p[0].z + g.trianglesToRaster[j].p[1].z + g.trianglesToRaster[j].p[2].z) / 3
 		return z1 > z2
 	})
 
