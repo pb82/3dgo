@@ -108,17 +108,18 @@ func (m *mesh) Load(filename string) bool {
 }
 
 type Game struct {
-	mesh         mesh
-	matProj      mat4x4
-	matWorld     mat4x4
-	milliseconds float64
-	elapsedTime  float64
-	fTheta       float64
-	vCamera      vec3d
-	rotX         mat4x4
-	rotY         mat4x4
-	rotZ         mat4x4
-	trans        mat4x4
+	mesh              mesh
+	matProj           mat4x4
+	matWorld          mat4x4
+	milliseconds      float64
+	elapsedTime       float64
+	fTheta            float64
+	vCamera           vec3d
+	rotX              mat4x4
+	rotY              mat4x4
+	rotZ              mat4x4
+	trans             mat4x4
+	trianglesToRaster []triangle
 }
 
 func (g *Game) Update() error {
@@ -147,7 +148,7 @@ func drawTriangle(screen *ebiten.Image, t *triangle) {
 	path.LineTo(t.X(2), t.Y(2))
 	path.Close()
 
-	vector.DrawFilledPath(screen, path, t, false, vector.FillRuleNonZero)
+	vector.DrawFilledPath(screen, path, t, false, vector.FillRuleEvenOdd)
 	// vector.StrokePath(screen, path, color.Black, false, &vector.StrokeOptions{Width: 1})
 }
 
@@ -159,7 +160,7 @@ func getColor(lum float64) (uint32, uint32, uint32, uint32) {
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(clearColor)
 
-	var trianglesToRaster []triangle
+	g.trianglesToRaster = nil
 
 	// draw triangles
 	for _, t := range g.mesh.tris {
@@ -222,21 +223,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			triProjected.p[2].x *= 0.5 * float64(w)
 			triProjected.p[2].y *= 0.5 * float64(h)
 
-			trianglesToRaster = append(trianglesToRaster, triProjected)
+			g.trianglesToRaster = append(g.trianglesToRaster, triProjected)
 		}
-
-		// sort triangles from back to front
-		sort.Slice(trianglesToRaster, func(i, j int) bool {
-			t1 := trianglesToRaster[i]
-			t2 := trianglesToRaster[j]
-			z1 := (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3
-			z2 := (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3
-			return z1 > z2
-		})
-
 	}
 
-	for _, triProjected := range trianglesToRaster {
+	// sort triangles from back to front
+	sort.Slice(g.trianglesToRaster, func(i, j int) bool {
+		t1 := g.trianglesToRaster[i]
+		t2 := g.trianglesToRaster[j]
+		z1 := (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3
+		z2 := (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3
+		return z1 > z2
+	})
+
+	for _, triProjected := range g.trianglesToRaster {
 		drawTriangle(screen, &triProjected)
 	}
 
