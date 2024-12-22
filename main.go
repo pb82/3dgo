@@ -127,11 +127,11 @@ func (g *Game) Update() error {
 	delta := milliseconds - g.milliseconds
 	g.milliseconds = milliseconds
 	g.elapsedTime += delta
-	g.fTheta = 1.0 * (g.elapsedTime / 1000)
+	// g.fTheta = 1.0 * (g.elapsedTime / 1000)
 
-	g.rotZ.rotateZ(g.fTheta * 0.5)
+	g.rotZ.rotateZ(g.fTheta)
 	g.rotX.rotateX(g.fTheta)
-	g.trans.translate(0, 0, 10)
+	g.trans.translate(0, 0, 5)
 
 	g.matWorld = matrixMakeIdentity()
 	g.matWorld = g.matWorld.multiplyMatrix(&g.rotZ)
@@ -250,7 +250,7 @@ func main() {
 	ebiten.SetWindowTitle("3D Engine")
 
 	cube := mesh{}
-	cube.Load("./teapot.obj")
+	cube.Load("./axis.obj")
 
 	fNear := float64(0.1)
 	fFar := float64(1000)
@@ -267,10 +267,10 @@ func main() {
 		elapsedTime:  0,
 		fTheta:       0,
 		matWorld:     matrixMakeIdentity(),
-		rotX:         makeMatrix(),
-		rotY:         makeMatrix(),
-		rotZ:         makeMatrix(),
-		trans:        makeMatrix(),
+		rotX:         matrixMakeIdentity(),
+		rotY:         matrixMakeIdentity(),
+		rotZ:         matrixMakeIdentity(),
+		trans:        matrixMakeIdentity(),
 		vCamera: vec3d{
 			x: 0,
 			y: 0,

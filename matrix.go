@@ -92,3 +92,14 @@ func matrixMakeProjection(fFovRad, fAspectRatio, fNear, fFar float64) mat4x4 {
 	matrix.m[3][3] = 0.0
 	return matrix
 }
+
+func matrixPointAt(pos, target, up *vec3d) mat4x4 {
+	newForward := target.Sub(pos)
+	newForward = newForward.Normalize()
+
+	a := newForward.Mul(up.DotProduct(&newForward))
+	newUp := up.Sub(&a)
+	newUp = newUp.Normalize()
+
+	return mat4x4{}
+}
