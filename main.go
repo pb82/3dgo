@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	_ "github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	_ "github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 var (
@@ -115,10 +117,13 @@ type Game struct {
 	elapsedTime       float64
 	fTheta            float64
 	vCamera           vec3d
+	vLookDirection    vec3d
 	rotX              mat4x4
 	rotY              mat4x4
 	rotZ              mat4x4
 	trans             mat4x4
+	matView           mat4x4
+	fYaw              float64
 	trianglesToRaster []triangle
 }
 
@@ -127,6 +132,9 @@ func (g *Game) Update() error {
 	delta := milliseconds - g.milliseconds
 	g.milliseconds = milliseconds
 	g.elapsedTime += delta
+
+	msPassed := delta / 1000
+
 	// g.fTheta = 1.0 * (g.elapsedTime / 1000)
 
 	g.rotZ.rotateZ(g.fTheta)
@@ -137,6 +145,48 @@ func (g *Game) Update() error {
 	g.matWorld = g.matWorld.multiplyMatrix(&g.rotZ)
 	g.matWorld = g.matWorld.multiplyMatrix(&g.rotX)
 	g.matWorld = g.matWorld.multiplyMatrix(&g.trans)
+
+	up := vec3d{0, 1, 0, 1}
+	target := vec3d{0, 0, 1, 1}
+
+	matCameraRot := matrixMakeIdentity()
+	matCameraRot.rotateY(g.fYaw)
+
+	g.vLookDirection = matCameraRot.matrixMultiplyVector(&target)
+	target = g.vCamera.Add(&g.vLookDirection)
+
+	camera := matrixPointAt(&g.vCamera, &target, &up)
+	g.matView = matrixQuickInverse(&camera)
+
+	vForward := g.vLookDirection.Mul(8 * msPassed)
+
+	keys := inpututil.AppendPressedKeys([]ebiten.Key{ebiten.KeyUp, ebiten.KeyDown, ebiten.KeyLeft, ebiten.KeyRight})
+	for _, key := range keys {
+		if key == ebiten.KeyW {
+			g.vCamera = g.vCamera.Add(&vForward)
+		}
+		if key == ebiten.KeyS {
+			g.vCamera = g.vCamera.Sub(&vForward)
+		}
+		if key == ebiten.KeyA {
+			g.fYaw -= 1 * msPassed
+		}
+		if key == ebiten.KeyD {
+			g.fYaw += 1 * msPassed
+		}
+		if key == ebiten.KeyUp {
+			g.vCamera.y += 4 * msPassed
+		}
+		if key == ebiten.KeyDown {
+			g.vCamera.y -= 4 * msPassed
+		}
+		if key == ebiten.KeyLeft {
+			g.vCamera.x -= 4 * msPassed
+		}
+		if key == ebiten.KeyRight {
+			g.vCamera.x += 4 * msPassed
+		}
+	}
 
 	return nil
 }
@@ -149,10 +199,13 @@ func drawTriangle(screen *ebiten.Image, t *triangle) {
 	path.Close()
 
 	vector.DrawFilledPath(screen, path, t, false, vector.FillRuleEvenOdd)
-	// vector.StrokePath(screen, path, color.Black, false, &vector.StrokeOptions{Width: 1})
+	vector.StrokePath(screen, path, color.Black, false, &vector.StrokeOptions{Width: 1})
 }
 
 func getColor(lum float64) (uint32, uint32, uint32, uint32) {
+	if lum < 0.1 {
+		lum = 0.1
+	}
 	v := 64 * 1024 * lum
 	return uint32(v), uint32(v), uint32(v), math.MaxUint32
 }
@@ -166,6 +219,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, t := range g.mesh.tris {
 		var triProjected triangle
 		var triTransformed triangle
+		var triViewed triangle
 
 		triTransformed.p[0] = g.matWorld.matrixMultiplyVector(&t.p[0])
 		triTransformed.p[1] = g.matWorld.matrixMultiplyVector(&t.p[1])
@@ -175,14 +229,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		line1 := triTransformed.p[1].Sub(&triTransformed.p[0])
 		line2 := triTransformed.p[2].Sub(&triTransformed.p[0])
 		normal := line1.CrossProduct(&line2)
-		normal = normal.Normalize()
+		normal = *normal.Normalize()
 
 		vCameraRay := triTransformed.p[0].Sub(&g.vCamera)
 
 		if normal.DotProduct(&vCameraRay) < 0.0 {
 
-			light_direction := vec3d{0, 0, -1, 1}
-			light_direction = light_direction.Normalize()
+			light_direction := vec3d{0, 1, -1, 1}
+			light_direction = *light_direction.Normalize()
 
 			dp := normal.x*light_direction.x + normal.y*light_direction.y + normal.z*light_direction.z
 
@@ -192,38 +246,70 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			triTransformed.b = bb
 			triTransformed.a = aa
 
-			triProjected.p[0] = g.matProj.matrixMultiplyVector(&triTransformed.p[0])
-			triProjected.p[1] = g.matProj.matrixMultiplyVector(&triTransformed.p[1])
-			triProjected.p[2] = g.matProj.matrixMultiplyVector(&triTransformed.p[2])
+			// convert world space to view space
+			triViewed.p[0] = g.matView.matrixMultiplyVector(&triTransformed.p[0])
+			triViewed.p[1] = g.matView.matrixMultiplyVector(&triTransformed.p[1])
+			triViewed.p[2] = g.matView.matrixMultiplyVector(&triTransformed.p[2])
 
-			triProjected.p[0] = triProjected.p[0].Div(triProjected.p[0].w)
-			triProjected.p[1] = triProjected.p[1].Div(triProjected.p[1].w)
-			triProjected.p[2] = triProjected.p[2].Div(triProjected.p[2].w)
+			// clip viewed triangle
+			clipped := [2]triangle{{
+				p: [3]vec3d{},
+				r: 0,
+				g: 0,
+				b: 0,
+				a: 0,
+			}, {
+				p: [3]vec3d{},
+				r: 0,
+				g: 0,
+				b: 0,
+				a: 0,
+			}}
+			nClippedTriangles := triangleClipAgainstPlane(vec3d{0, 0, 0.1, 1}, vec3d{0, 0, 1, 1}, &triViewed, &clipped[0], &clipped[1])
 
-			triProjected.r = triTransformed.r
-			triProjected.g = triTransformed.g
-			triProjected.b = triTransformed.b
-			triProjected.a = triTransformed.a
+			for n := 0; n < nClippedTriangles; n++ {
+				// project from 3d to 2d
+				triProjected.p[0] = g.matProj.matrixMultiplyVector(&clipped[n].p[0])
+				triProjected.p[1] = g.matProj.matrixMultiplyVector(&clipped[n].p[1])
+				triProjected.p[2] = g.matProj.matrixMultiplyVector(&clipped[n].p[2])
 
-			offsetView := vec3d{
-				x: 1,
-				y: 1,
-				z: 0,
-				w: 1,
+				triProjected.r = clipped[n].r
+				triProjected.g = clipped[n].g
+				triProjected.b = clipped[n].b
+				triProjected.a = clipped[n].a
+
+				triProjected.p[0] = triProjected.p[0].Div(triProjected.p[0].w)
+				triProjected.p[1] = triProjected.p[1].Div(triProjected.p[1].w)
+				triProjected.p[2] = triProjected.p[2].Div(triProjected.p[2].w)
+
+				// X/Y are inverted so put them back
+				triProjected.p[0].x *= -1.0
+				triProjected.p[1].x *= -1.0
+				triProjected.p[2].x *= -1.0
+				triProjected.p[0].y *= -1.0
+				triProjected.p[1].y *= -1.0
+				triProjected.p[2].y *= -1.0
+
+				offsetView := vec3d{
+					x: 1,
+					y: 1,
+					z: 0,
+					w: 1,
+				}
+
+				triProjected.p[0] = triProjected.p[0].Add(&offsetView)
+				triProjected.p[1] = triProjected.p[1].Add(&offsetView)
+				triProjected.p[2] = triProjected.p[2].Add(&offsetView)
+
+				triProjected.p[0].x *= 0.5 * float64(w)
+				triProjected.p[0].y *= 0.5 * float64(h)
+				triProjected.p[1].x *= 0.5 * float64(w)
+				triProjected.p[1].y *= 0.5 * float64(h)
+				triProjected.p[2].x *= 0.5 * float64(w)
+				triProjected.p[2].y *= 0.5 * float64(h)
+
+				g.trianglesToRaster = append(g.trianglesToRaster, triProjected)
 			}
-
-			triProjected.p[0] = triProjected.p[0].Add(&offsetView)
-			triProjected.p[1] = triProjected.p[1].Add(&offsetView)
-			triProjected.p[2] = triProjected.p[2].Add(&offsetView)
-
-			triProjected.p[0].x *= 0.5 * float64(w)
-			triProjected.p[0].y *= 0.5 * float64(h)
-			triProjected.p[1].x *= 0.5 * float64(w)
-			triProjected.p[1].y *= 0.5 * float64(h)
-			triProjected.p[2].x *= 0.5 * float64(w)
-			triProjected.p[2].y *= 0.5 * float64(h)
-
-			g.trianglesToRaster = append(g.trianglesToRaster, triProjected)
 		}
 	}
 
@@ -250,7 +336,7 @@ func main() {
 	ebiten.SetWindowTitle("3D Engine")
 
 	cube := mesh{}
-	cube.Load("./axis.obj")
+	cube.Load("./teapot.obj")
 
 	fNear := float64(0.1)
 	fFar := float64(1000)
