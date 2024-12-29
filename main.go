@@ -199,7 +199,7 @@ func drawTriangle(screen *ebiten.Image, t *triangle) {
 	path.Close()
 
 	vector.DrawFilledPath(screen, path, t, false, vector.FillRuleEvenOdd)
-	vector.StrokePath(screen, path, color.Black, false, &vector.StrokeOptions{Width: 1})
+	// vector.StrokePath(screen, path, color.Black, false, &vector.StrokeOptions{Width: 1})
 }
 
 func getColor(lum float64) (uint32, uint32, uint32, uint32) {
@@ -241,10 +241,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			dp := normal.x*light_direction.x + normal.y*light_direction.y + normal.z*light_direction.z
 
 			rr, gg, bb, aa := getColor(dp)
-			triTransformed.r = rr
-			triTransformed.g = gg
-			triTransformed.b = bb
-			triTransformed.a = aa
+			triViewed.r = rr
+			triViewed.g = gg
+			triViewed.b = bb
+			triViewed.a = aa
 
 			// convert world space to view space
 			triViewed.p[0] = g.matView.matrixMultiplyVector(&triTransformed.p[0])
@@ -252,20 +252,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			triViewed.p[2] = g.matView.matrixMultiplyVector(&triTransformed.p[2])
 
 			// clip viewed triangle
-			clipped := [2]triangle{{
-				p: [3]vec3d{},
-				r: 0,
-				g: 0,
-				b: 0,
-				a: 0,
-			}, {
-				p: [3]vec3d{},
-				r: 0,
-				g: 0,
-				b: 0,
-				a: 0,
-			}}
-			nClippedTriangles := triangleClipAgainstPlane(vec3d{0, 0, 0.1, 1}, vec3d{0, 0, 1, 1}, &triViewed, &clipped[0], &clipped[1])
+			clipped := [2]triangle{}
+			nClippedTriangles := triangleClipAgainstPlane(vec3d{0, 0, 0.1, 1}, vec3d{0, 0, 2.1, 1}, &triViewed, &clipped[0], &clipped[1])
 
 			for n := 0; n < nClippedTriangles; n++ {
 				// project from 3d to 2d
@@ -315,13 +303,50 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// sort triangles from back to front
 	sort.Slice(g.trianglesToRaster, func(i, j int) bool {
-		z1 := (g.trianglesToRaster[i].p[0].z + g.trianglesToRaster[i].p[1].z + g.trianglesToRaster[i].p[2].z) / 3
-		z2 := (g.trianglesToRaster[j].p[0].z + g.trianglesToRaster[j].p[1].z + g.trianglesToRaster[j].p[2].z) / 3
+		z1 := (g.trianglesToRaster[i].p[0].z + g.trianglesToRaster[i].p[1].z + g.trianglesToRaster[i].p[2].z) / 3.0
+		z2 := (g.trianglesToRaster[j].p[0].z + g.trianglesToRaster[j].p[1].z + g.trianglesToRaster[j].p[2].z) / 3.0
 		return z1 > z2
 	})
 
-	for _, triProjected := range g.trianglesToRaster {
-		drawTriangle(screen, &triProjected)
+	for _, triToRaster := range g.trianglesToRaster {
+		clipped := [2]triangle{}
+		var listTriangles []triangle
+		listTriangles = append(listTriangles, triToRaster)
+		newTriangles := 1
+
+		for p := 0; p < 4; p++ {
+			trisToAdd := 0
+			for newTriangles > 0 {
+				test := listTriangles[0]
+				listTriangles = listTriangles[1:]
+				newTriangles--
+
+				// nClippedTriangles := triangleClipAgainstPlane(vec3d{0, 0, 0.1, 1}, vec3d{0, 0, 2.1, 1}, &triViewed, &clipped[0], &clipped[1])
+
+				switch p {
+				case 0:
+					trisToAdd = triangleClipAgainstPlane(vec3d{0, 0, 0, 1}, vec3d{0, 1, 0, 1}, &test, &clipped[0], &clipped[1])
+					break
+				case 1:
+					trisToAdd = triangleClipAgainstPlane(vec3d{0, float64(h - 1), 0, 1}, vec3d{0, -1, 0, 1}, &test, &clipped[0], &clipped[1])
+					break
+				case 2:
+					trisToAdd = triangleClipAgainstPlane(vec3d{0, 0, 0, 1}, vec3d{1, 0, 0, 1}, &test, &clipped[0], &clipped[1])
+					break
+				case 3:
+					trisToAdd = triangleClipAgainstPlane(vec3d{float64(w - 1), 0, 0, 1}, vec3d{-1, 0, 0, 1}, &test, &clipped[0], &clipped[1])
+					break
+				}
+
+				for w := 0; w < trisToAdd; w++ {
+					listTriangles = append(listTriangles, clipped[w])
+				}
+			}
+			newTriangles = len(listTriangles)
+		}
+		for _, triProjected := range listTriangles {
+			drawTriangle(screen, &triProjected)
+		}
 	}
 
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("%.0f FPS", ebiten.ActualFPS()))

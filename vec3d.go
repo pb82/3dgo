@@ -44,8 +44,8 @@ func (v *vec3d) Div(scalar float64) vec3d {
 	}
 }
 
-func (v *vec3d) DotProduct(v2 *vec3d) float64 {
-	return v.x*v2.x + v.y*v2.y + v.z*v2.z
+func (v1 *vec3d) DotProduct(v2 *vec3d) float64 {
+	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z
 }
 
 func (v *vec3d) Length() float64 {
@@ -62,13 +62,12 @@ func (v *vec3d) Normalize() *vec3d {
 	}
 }
 
-func (v *vec3d) CrossProduct(v2 *vec3d) vec3d {
-	return vec3d{
-		x: v.y*v2.z - v.z*v2.x,
-		y: v.z*v2.x - v.x*v2.z,
-		z: v.x*v2.y - v.y*v2.x,
-		w: v.w,
-	}
+func (v1 *vec3d) CrossProduct(v2 *vec3d) vec3d {
+	v := vec3d{}
+	v.x = v1.y*v2.z - v1.z*v2.y
+	v.y = v1.z*v2.x - v1.x*v2.z
+	v.z = v1.x*v2.y - v1.y*v2.x
+	return v
 }
 
 func vectorIntersectPlane(plane_p, plane_n, line_start, line_end *vec3d) vec3d {
@@ -86,7 +85,8 @@ func triangleClipAgainstPlane(plane_p, plane_n vec3d, in_tri, out_tri1, out_tri2
 	plane_n = *plane_n.Normalize()
 
 	dist := func(p *vec3d) float64 {
-		return plane_n.x*p.x + plane_n.y*p.y + plane_n.z - plane_n.DotProduct(&plane_p)
+		// n := p.Normalize()
+		return plane_n.x*p.x + plane_n.y*p.y + plane_n.z*p.z - plane_n.DotProduct(&plane_p)
 	}
 
 	d0 := dist(&in_tri.p[0])
@@ -94,14 +94,10 @@ func triangleClipAgainstPlane(plane_p, plane_n vec3d, in_tri, out_tri1, out_tri2
 	d2 := dist(&in_tri.p[2])
 
 	nInsidePointCount := 0
-	inside_points := [3]*vec3d{
-		&vec3d{}, &vec3d{}, &vec3d{},
-	}
+	inside_points := [3]*vec3d{}
 
 	nOutsidePointCount := 0
-	outside_points := [3]*vec3d{
-		&vec3d{}, &vec3d{}, &vec3d{},
-	}
+	outside_points := [3]*vec3d{}
 
 	if d0 >= 0 {
 		inside_points[nInsidePointCount] = &in_tri.p[0]
@@ -137,7 +133,7 @@ func triangleClipAgainstPlane(plane_p, plane_n vec3d, in_tri, out_tri1, out_tri2
 	if nInsidePointCount == 3 {
 		// All points lie on the inside of plane, so do nothing
 		// and allow the triangle to simply pass through
-		out_tri1 = in_tri
+		*out_tri1 = *in_tri
 
 		return 1 // Just the one returned original triangle is valid
 	}
@@ -147,10 +143,10 @@ func triangleClipAgainstPlane(plane_p, plane_n vec3d, in_tri, out_tri1, out_tri2
 		// the plane, the triangle simply becomes a smaller triangle
 
 		// Copy appearance info to new triangle
-		out_tri1.r = in_tri.r
-		out_tri1.g = in_tri.g
-		out_tri1.b = in_tri.b
-		out_tri1.a = in_tri.a
+		out_tri1.r = math.MaxUint32
+		out_tri1.g = 0
+		out_tri1.b = 0
+		out_tri1.a = math.MaxUint32
 
 		// The inside point is valid, so keep that...
 		out_tri1.p[0] = *inside_points[0]
@@ -169,15 +165,15 @@ func triangleClipAgainstPlane(plane_p, plane_n vec3d, in_tri, out_tri1, out_tri2
 		// represent a quad with two new triangles
 
 		// Copy appearance info to new triangles
-		out_tri1.r = in_tri.r
-		out_tri1.g = in_tri.g
-		out_tri1.b = in_tri.b
-		out_tri1.a = in_tri.a
+		out_tri1.r = 0
+		out_tri1.g = math.MaxUint32
+		out_tri1.b = 0
+		out_tri1.a = math.MaxUint32
 
-		out_tri2.r = in_tri.r
-		out_tri2.g = in_tri.g
-		out_tri2.b = in_tri.b
-		out_tri2.a = in_tri.a
+		out_tri2.r = 0
+		out_tri2.g = 0
+		out_tri2.b = math.MaxUint32
+		out_tri2.a = math.MaxUint32
 
 		// The first triangle consists of the two inside points and a new
 		// point determined by the location where one side of the triangle
