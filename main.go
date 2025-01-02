@@ -308,6 +308,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		return z1 > z2
 	})
 
+	trianglesDrawn := 0
+
 	for _, triToRaster := range g.trianglesToRaster {
 		clipped := [2]triangle{}
 		var listTriangles []triangle
@@ -346,10 +348,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 		for _, triProjected := range listTriangles {
 			drawTriangle(screen, &triProjected)
+			trianglesDrawn++
 		}
 	}
 
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("%.0f FPS", ebiten.ActualFPS()))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("%.0f FPS, %d tris", ebiten.ActualFPS(), trianglesDrawn))
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -361,7 +364,7 @@ func main() {
 	ebiten.SetWindowTitle("3D Engine")
 
 	cube := mesh{}
-	cube.Load("./teapot.obj")
+	cube.Load("./mountains.obj")
 
 	fNear := float64(0.1)
 	fFar := float64(1000)
