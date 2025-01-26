@@ -42,6 +42,7 @@ var (
 
 type triangle struct {
 	p [3]vec3d
+	t [3]vec2d
 	r uint32
 	g uint32
 	b uint32
@@ -62,6 +63,28 @@ func (t *triangle) RGBA() (r, g, b, a uint32) {
 
 type mesh struct {
 	tris []triangle
+}
+
+func (m *mesh) LoadCube() {
+	m.tris = []triangle{
+		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {0.0, 1.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
+		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+
+		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
+		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+
+		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
+		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+
+		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {0.0, 1.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
+		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+	}
 }
 
 func (m *mesh) Load(filename string) bool {
@@ -125,6 +148,7 @@ type Game struct {
 	matView           mat4x4
 	fYaw              float64
 	trianglesToRaster []triangle
+	tex               *ebiten.Image
 }
 
 func (g *Game) Update() error {
@@ -191,6 +215,110 @@ func (g *Game) Update() error {
 	return nil
 }
 
+func texturedTriangle(x1, y1 int, u1, v1 float64,
+	x2, y2 int, u2, v2 float64,
+	x3, y3 int, u3, v3 float64,
+	tex *ebiten.Image) {
+
+	if y2 < y1 {
+		y1, y2 = y2, y1
+		x1, x2 = x2, x1
+		u1, u2 = u2, u1
+		v1, v2 = v2, v1
+	}
+
+	if y3 < y1 {
+		y1, y3 = y3, y1
+		x1, x2 = x3, x1
+		u1, u3 = u3, u1
+		v1, v3 = v3, v1
+	}
+
+	if y3 < y2 {
+		y2, y3 = y3, y2
+		x2, x3 = x3, x2
+		u2, u3 = u3, u2
+		v2, v3 = v3, v2
+	}
+
+	dy1 := y2 - y1
+	dx1 := x2 - x1
+	dv1 := v2 - v1
+	du1 := u2 - u1
+
+	dy2 := y3 - y1
+	dx2 := x3 - x1
+	dv2 := v3 - v1
+	du2 := u3 - u1
+
+	var tex_u, tex_v, tex_w float64
+
+	var dax_step = float64(0)
+	var dbx_step = float64(0)
+
+	var du1_step = float64(0)
+	var dv1_step = float64(0)
+	var du2_step = float64(0)
+	var dv2_step = float64(0)
+	var dw1_step = float64(0)
+	var dw2_step = float64(0)
+
+	if dy1 != 0 {
+		dax_step = float64(dx1) / math.Abs(float64(dy1))
+	}
+	if dy2 != 0 {
+		dbx_step = float64(dx2) / math.Abs(float64(dy2))
+	}
+
+	if dy1 != 0 {
+		du1_step = float64(du1) / math.Abs(float64(dy1))
+	}
+	if dy1 != 0 {
+		dv1_step = float64(dv1) / math.Abs(float64(dy1))
+	}
+
+	if dy2 != 0 {
+		du2_step = float64(du2) / math.Abs(float64(dy2))
+	}
+	if dy2 != 0 {
+		dv2_step = float64(dv2) / math.Abs(float64(dy2))
+	}
+
+	if dy1 != 0 {
+		for i := y1; i <= y2; i++ {
+			ax := float64(x1+(i-y1)) * dax_step
+			bx := float64(x1+(i-y1)) * dbx_step
+
+			tex_su := u1 + float64(i-y1)*du1_step
+			tex_sv := v1 + float64(i-y1)*dv1_step
+
+			tex_eu := u1 + float64(i-y1)*du2_step
+			tex_ev := v1 + float64(i-y1)*dv2_step
+
+			if ax > bx {
+				ax, bx = bx, ax
+				tex_su, tex_eu = tex_eu, tex_su
+				tex_sv, tex_ev = tex_ev, tex_sv
+			}
+
+			tex_u = tex_su
+			tex_v = tex_sv
+
+			tstep := 1.0 / (bx - ax)
+			t := 0.0
+
+			for j := ax; j <= bx; j++ {
+				tex_u = (1.0-t)*tex_su + t*tex_eu
+				tex_v = (1.0-t)*tex_sv + t*tex_ev
+
+				if tex_w > pDepthBuffer[i*ScreenWidth()+j] {
+
+				}
+			}
+		}
+	}
+}
+
 func drawTriangle(screen *ebiten.Image, t *triangle) {
 	path := &vector.Path{}
 	path.MoveTo(t.X(0), t.Y(0))
@@ -199,7 +327,7 @@ func drawTriangle(screen *ebiten.Image, t *triangle) {
 	path.Close()
 
 	vector.DrawFilledPath(screen, path, t, false, vector.FillRuleEvenOdd)
-	// vector.StrokePath(screen, path, color.Black, false, &vector.StrokeOptions{Width: 1})
+	vector.StrokePath(screen, path, color.White, false, &vector.StrokeOptions{Width: 1})
 }
 
 func getColor(lum float64) (uint32, uint32, uint32, uint32) {
@@ -224,6 +352,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		triTransformed.p[0] = g.matWorld.matrixMultiplyVector(&t.p[0])
 		triTransformed.p[1] = g.matWorld.matrixMultiplyVector(&t.p[1])
 		triTransformed.p[2] = g.matWorld.matrixMultiplyVector(&t.p[2])
+		triTransformed.t[0] = t.t[0]
+		triTransformed.t[1] = t.t[1]
+		triTransformed.t[2] = t.t[2]
 
 		// NORMAL
 		line1 := triTransformed.p[1].Sub(&triTransformed.p[0])
@@ -250,6 +381,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			triViewed.p[0] = g.matView.matrixMultiplyVector(&triTransformed.p[0])
 			triViewed.p[1] = g.matView.matrixMultiplyVector(&triTransformed.p[1])
 			triViewed.p[2] = g.matView.matrixMultiplyVector(&triTransformed.p[2])
+			triViewed.t[0] = triTransformed.t[0]
+			triViewed.t[1] = triTransformed.t[1]
+			triViewed.t[2] = triTransformed.t[2]
 
 			// clip viewed triangle
 			clipped := [2]triangle{}
@@ -260,6 +394,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				triProjected.p[0] = g.matProj.matrixMultiplyVector(&clipped[n].p[0])
 				triProjected.p[1] = g.matProj.matrixMultiplyVector(&clipped[n].p[1])
 				triProjected.p[2] = g.matProj.matrixMultiplyVector(&clipped[n].p[2])
+				triProjected.t[0] = clipped[n].t[0]
+				triProjected.t[1] = clipped[n].t[1]
+				triProjected.t[2] = clipped[n].t[2]
 
 				triProjected.r = clipped[n].r
 				triProjected.g = clipped[n].g
@@ -364,7 +501,8 @@ func main() {
 	ebiten.SetWindowTitle("3D Engine")
 
 	cube := mesh{}
-	cube.Load("./mountains.obj")
+	cube.LoadCube()
+	// cube.Load("./mountains.obj")
 
 	fNear := float64(0.1)
 	fFar := float64(1000)
@@ -373,6 +511,8 @@ func main() {
 	fFovRad := 1.0 / math.Tan(fFov*0.5/180*math.Pi)
 
 	projectionMatrix := matrixMakeProjection(fFovRad, fAspectRatio, fNear, fFar)
+
+	img, _, _ := ebitenutil.NewImageFromFile("./wall.png")
 
 	g := &Game{
 		mesh:         cube,
@@ -385,6 +525,7 @@ func main() {
 		rotY:         matrixMakeIdentity(),
 		rotZ:         matrixMakeIdentity(),
 		trans:        matrixMakeIdentity(),
+		tex:          img,
 		vCamera: vec3d{
 			x: 0,
 			y: 0,
