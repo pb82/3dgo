@@ -310,9 +310,13 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 				tex_u = (1.0-t)*tex_su + t*tex_eu
 				tex_v = (1.0-t)*tex_sv + t*tex_ev
 
+				ww, hh := tex.Size()
+				www := float64(ww)
+				hhh := float64(hh)
+
 				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
-				screen.Set(int(j), i, tex.RGBA64At(int(tex_u), int(tex_v)))
-				// log.Println(j, i)
+				screen.Set(int(j), i, tex.RGBA64At(int(tex_u*www), int(tex_v*hhh)))
+				// log.Println(tex_u, tex_v, tex.RGBA64At(int(tex_u), int(tex_v)))
 				t += tstep
 			}
 		}
@@ -368,8 +372,13 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 					tex_u = (1.0-t)*tex_su + t*tex_eu
 					tex_v = (1.0-t)*tex_sv + t*tex_ev
 
+					ww, hh := tex.Size()
+					www := float64(ww)
+					hhh := float64(hh)
+
 					// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
-					screen.Set(int(j), i, tex.RGBA64At(int(tex_u), int(tex_v)))
+					screen.Set(int(j), i, tex.RGBA64At(int(tex_u*www), int(tex_v*hhh)))
+
 					t += tstep
 				}
 			}
@@ -542,7 +551,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			newTriangles = len(listTriangles)
 		}
 		for _, t := range listTriangles {
-			texturedTriangle(int(t.p[0].x), int(t.p[0].y), t.t[0].u, t.t[0].v,
+			texturedTriangle(
+				int(t.p[0].x), int(t.p[0].y), t.t[0].u, t.t[0].v,
 				int(t.p[1].x), int(t.p[1].y), t.t[1].u, t.t[1].v,
 				int(t.p[2].x), int(t.p[2].y), t.t[2].u, t.t[2].v, g.tex, screen)
 
