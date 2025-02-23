@@ -5,7 +5,7 @@ import (
 )
 
 type vec2d struct {
-	u, v float64
+	u, v, w float64
 }
 
 type vec3d struct {

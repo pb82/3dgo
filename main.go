@@ -67,23 +67,23 @@ type mesh struct {
 
 func (m *mesh) LoadCube() {
 	m.tris = []triangle{
-		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {0.0, 1.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
-		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {0.0, 1.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
+		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
 
-		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
-		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
+		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
 
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
 
-		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
-		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
+		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
 
-		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {0.0, 1.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
-		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {0.0, 1.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
+		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
 
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {0, 0}, {1, 0}}},
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1}, {1, 0}, {1, 1}}},
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
+		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
 	}
 }
 
@@ -259,31 +259,31 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 	var du2_step = float64(0)
 	var dv2_step = float64(0)
 
-	if dy1 > 0 {
+	if dy1 >= 0 {
 		dax_step = float64(dx1) / math.Abs(float64(dy1))
 	}
 
-	if dy2 > 0 {
+	if dy2 >= 0 {
 		dbx_step = float64(dx2) / math.Abs(float64(dy2))
 	}
 
-	if dy1 > 0 {
+	if dy1 >= 0 {
 		du1_step = float64(du1) / math.Abs(float64(dy1))
 	}
 
-	if dy1 > 0 {
+	if dy1 >= 0 {
 		dv1_step = float64(dv1) / math.Abs(float64(dy1))
 	}
 
-	if dy2 > 0 {
+	if dy2 >= 0 {
 		du2_step = float64(du2) / math.Abs(float64(dy2))
 	}
 
-	if dy2 > 0 {
+	if dy2 >= 0 {
 		dv2_step = float64(dv2) / math.Abs(float64(dy2))
 	}
 
-	if dy1 > 0 {
+	if dy1 >= 0 {
 		for i := y1; i <= y2; i++ {
 			ax := float64(x1) + float64(i-y1)*dax_step
 			bx := float64(x1) + float64(i-y1)*dbx_step
@@ -320,67 +320,67 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 				t += tstep
 			}
 		}
+	}
 
-		dy1 = y3 - y2
-		dx1 = x3 - x2
-		dv1 = v3 - v2
-		du1 = u3 - u2
+	dy1 = y3 - y2
+	dx1 = x3 - x2
+	dv1 = v3 - v2
+	du1 = u3 - u2
 
-		if dy1 > 0 {
-			dax_step = float64(dx1) / math.Abs(float64(dy1))
-		}
+	if dy1 >= 0 {
+		dax_step = float64(dx1) / math.Abs(float64(dy1))
+	}
 
-		if dy2 > 0 {
-			dbx_step = float64(dx2) / math.Abs(float64(dy2))
-		}
+	if dy2 >= 0 {
+		dbx_step = float64(dx2) / math.Abs(float64(dy2))
+	}
 
-		du1_step = 0
-		dv1_step = 0
+	du1_step = 0
+	dv1_step = 0
 
-		if dy1 > 0 {
-			du1_step = du1 / math.Abs(float64(dy1))
-		}
+	if dy1 >= 0 {
+		du1_step = du1 / math.Abs(float64(dy1))
+	}
 
-		if dy1 > 0 {
-			dv1_step = dv1 / math.Abs(float64(dy1))
-		}
+	if dy1 >= 0 {
+		dv1_step = dv1 / math.Abs(float64(dy1))
+	}
 
-		if dy1 > 0 {
-			for i := y2; i <= y3; i++ {
-				ax := float64(x2) + float64(i-y2)*dax_step
-				bx := float64(x1) + float64(i-y1)*dbx_step
+	if dy1 >= 0 {
+		for i := y2; i <= y3; i++ {
+			ax := float64(x2) + float64(i-y2)*dax_step
+			bx := float64(x1) + float64(i-y1)*dbx_step
 
-				tex_su := u2 + float64(i-y2)*du1_step
-				tex_sv := v2 + float64(i-y2)*dv1_step
+			tex_su := u2 + float64(i-y2)*du1_step
+			tex_sv := v2 + float64(i-y2)*dv1_step
 
-				tex_eu := u1 + float64(i-y1)*du2_step
-				tex_ev := v1 + float64(i-y1)*dv2_step
+			tex_eu := u1 + float64(i-y1)*du2_step
+			tex_ev := v1 + float64(i-y1)*dv2_step
 
-				if ax > bx {
-					ax, bx = bx, ax
-					tex_su, tex_eu = tex_eu, tex_su
-					tex_sv, tex_ev = tex_ev, tex_sv
-				}
+			if ax > bx {
+				ax, bx = bx, ax
+				tex_su, tex_eu = tex_eu, tex_su
+				tex_sv, tex_ev = tex_ev, tex_sv
+			}
 
-				tex_u := tex_su
-				tex_v := tex_sv
+			tex_u := tex_su
+			tex_v := tex_sv
 
-				tstep := 1.0 / (bx - ax)
-				t := 0.0
+			tstep := 1.0 / (bx - ax)
+			t := 0.0
 
-				for j := ax; j < bx; j++ {
-					tex_u = (1.0-t)*tex_su + t*tex_eu
-					tex_v = (1.0-t)*tex_sv + t*tex_ev
+			for j := ax; j < bx; j++ {
+				tex_u = (1.0-t)*tex_su + t*tex_eu
+				tex_v = (1.0-t)*tex_sv + t*tex_ev
 
-					ww, hh := tex.Size()
-					www := float64(ww)
-					hhh := float64(hh)
+				ww, hh := tex.Size()
+				www := float64(ww)
+				hhh := float64(hh)
 
-					// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
-					screen.Set(int(j), i, tex.RGBA64At(int(tex_u*www), int(tex_v*hhh)))
+				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
+				screen.Set(int(j), i, tex.RGBA64At(int(tex_u*www), int(tex_v*hhh)))
 
-					t += tstep
-				}
+				t += tstep
 			}
 		}
 	}
@@ -451,6 +451,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			triViewed.t[0] = triTransformed.t[0]
 			triViewed.t[1] = triTransformed.t[1]
 			triViewed.t[2] = triTransformed.t[2]
+
+			triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].w
+			triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].w
+			triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].w
+
+			triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].w
+			triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].w
+			triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].w
+
+			triProjected.t[0].w = 1.0 / triProjected.p[0].w
+			triProjected.t[1].w = 1.0 / triProjected.p[1].w
+			triProjected.t[2].w = 1.0 / triProjected.p[2].w
 
 			// clip viewed triangle
 			clipped := [2]triangle{}
