@@ -215,16 +215,20 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func texturedTriangle(x1, y1 int, u1, v1 float64,
-	x2, y2 int, u2, v2 float64,
-	x3, y3 int, u3, v3 float64,
+func texturedTriangle(x1, y1 int, u1, v1, w1 float64,
+	x2, y2 int, u2, v2, w2 float64,
+	x3, y3 int, u3, v3, w3 float64,
 	tex *ebiten.Image, screen *ebiten.Image) {
+
+	bounds := tex.Bounds()
 
 	if y2 < y1 {
 		y1, y2 = y2, y1
 		x1, x2 = x2, x1
 		u1, u2 = u2, u1
 		v1, v2 = v2, v1
+		w1, w2 = w2, w1
+
 	}
 
 	if y3 < y1 {
@@ -232,6 +236,8 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 		x1, x3 = x3, x1
 		u1, u3 = u3, u1
 		v1, v3 = v3, v1
+		w1, w3 = w3, w1
+
 	}
 
 	if y3 < y2 {
@@ -239,30 +245,34 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 		x2, x3 = x3, x2
 		u2, u3 = u3, u2
 		v2, v3 = v3, v2
+		w2, w3 = w3, w2
 	}
 
 	dy1 := y2 - y1
 	dx1 := x2 - x1
 	dv1 := v2 - v1
 	du1 := u2 - u1
+	dw1 := w2 - w1
 
 	dy2 := y3 - y1
 	dx2 := x3 - x1
 	dv2 := v3 - v1
 	du2 := u3 - u1
+	dw2 := w3 - w1
 
 	var dax_step = float64(0)
 	var dbx_step = float64(0)
 
 	var du1_step = float64(0)
 	var dv1_step = float64(0)
+	var dw1_step = float64(0)
 	var du2_step = float64(0)
 	var dv2_step = float64(0)
+	var dw2_step = float64(0)
 
 	if dy1 >= 0 {
 		dax_step = float64(dx1) / math.Abs(float64(dy1))
 	}
-
 	if dy2 >= 0 {
 		dbx_step = float64(dx2) / math.Abs(float64(dy2))
 	}
@@ -270,17 +280,21 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 	if dy1 >= 0 {
 		du1_step = float64(du1) / math.Abs(float64(dy1))
 	}
-
 	if dy1 >= 0 {
 		dv1_step = float64(dv1) / math.Abs(float64(dy1))
+	}
+	if dy1 >= 0 {
+		dw1_step = float64(dw1) / math.Abs(float64(dy1))
 	}
 
 	if dy2 >= 0 {
 		du2_step = float64(du2) / math.Abs(float64(dy2))
 	}
-
 	if dy2 >= 0 {
 		dv2_step = float64(dv2) / math.Abs(float64(dy2))
+	}
+	if dy2 >= 0 {
+		dw2_step = float64(dw2) / math.Abs(float64(dy2))
 	}
 
 	if dy1 >= 0 {
@@ -290,18 +304,22 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 
 			tex_su := u1 + float64(i-y1)*du1_step
 			tex_sv := v1 + float64(i-y1)*dv1_step
+			tex_sw := w1 + float64(i-y1)*dw1_step
 
 			tex_eu := u1 + float64(i-y1)*du2_step
 			tex_ev := v1 + float64(i-y1)*dv2_step
+			tex_ew := w1 + float64(i-y1)*dw2_step
 
 			if ax > bx {
 				ax, bx = bx, ax
 				tex_su, tex_eu = tex_eu, tex_su
 				tex_sv, tex_ev = tex_ev, tex_sv
+				tex_sw, tex_ew = tex_ew, tex_sw
 			}
 
 			tex_u := tex_su
 			tex_v := tex_sv
+			tex_w := tex_sw
 
 			tstep := 1.0 / (bx - ax)
 			t := 0.0
@@ -309,14 +327,17 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 			for j := ax; j < bx; j++ {
 				tex_u = (1.0-t)*tex_su + t*tex_eu
 				tex_v = (1.0-t)*tex_sv + t*tex_ev
+				tex_w = (1.0-t)*tex_sw + t*tex_ew
 
-				ww, hh := tex.Size()
-				www := float64(ww)
-				hhh := float64(hh)
+				pcX := tex_u / tex_w
+				pcY := tex_v / tex_w
 
-				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
-				screen.Set(int(j), i, tex.RGBA64At(int(tex_u*www), int(tex_v*hhh)))
-				// log.Println(tex_u, tex_v, tex.RGBA64At(int(tex_u), int(tex_v)))
+				pcX += 1
+				pcY += 1
+
+				imageX, imageY := int(tex_u*float64(bounds.Dx())), int(tex_v*float64(bounds.Dy()))
+				clr := tex.RGBA64At(imageX, imageY)
+				screen.Set(int(j), i, clr)
 				t += tstep
 			}
 		}
@@ -326,6 +347,7 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 	dx1 = x3 - x2
 	dv1 = v3 - v2
 	du1 = u3 - u2
+	dw1 = w3 - w2
 
 	if dy1 >= 0 {
 		dax_step = float64(dx1) / math.Abs(float64(dy1))
@@ -347,24 +369,32 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 	}
 
 	if dy1 >= 0 {
+		dw1_step = dw1 / math.Abs(float64(dy1))
+	}
+
+	if dy1 >= 0 {
 		for i := y2; i <= y3; i++ {
 			ax := float64(x2) + float64(i-y2)*dax_step
 			bx := float64(x1) + float64(i-y1)*dbx_step
 
 			tex_su := u2 + float64(i-y2)*du1_step
 			tex_sv := v2 + float64(i-y2)*dv1_step
+			tex_sw := w2 + float64(i-y2)*dw1_step
 
 			tex_eu := u1 + float64(i-y1)*du2_step
 			tex_ev := v1 + float64(i-y1)*dv2_step
+			tex_ew := w1 + float64(i-y1)*dw2_step
 
 			if ax > bx {
 				ax, bx = bx, ax
 				tex_su, tex_eu = tex_eu, tex_su
 				tex_sv, tex_ev = tex_ev, tex_sv
+				tex_sw, tex_ew = tex_ew, tex_sw
 			}
 
 			tex_u := tex_su
 			tex_v := tex_sv
+			tex_w := tex_sw
 
 			tstep := 1.0 / (bx - ax)
 			t := 0.0
@@ -372,13 +402,18 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 			for j := ax; j < bx; j++ {
 				tex_u = (1.0-t)*tex_su + t*tex_eu
 				tex_v = (1.0-t)*tex_sv + t*tex_ev
+				tex_w = (1.0-t)*tex_sw + t*tex_ew
 
-				ww, hh := tex.Size()
-				www := float64(ww)
-				hhh := float64(hh)
+				pcX := tex_u / tex_w
+				pcY := tex_v / tex_w
 
-				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
-				screen.Set(int(j), i, tex.RGBA64At(int(tex_u*www), int(tex_v*hhh)))
+				pcX += 1
+				pcY += 1
+
+				imageX, imageY := int(tex_u*float64(bounds.Dx())), int(tex_v*float64(bounds.Dy()))
+
+				clr := tex.RGBA64At(imageX, imageY)
+				screen.Set(int(j), i, clr)
 
 				t += tstep
 			}
@@ -564,9 +599,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 		for _, t := range listTriangles {
 			texturedTriangle(
-				int(t.p[0].x), int(t.p[0].y), t.t[0].u, t.t[0].v,
-				int(t.p[1].x), int(t.p[1].y), t.t[1].u, t.t[1].v,
-				int(t.p[2].x), int(t.p[2].y), t.t[2].u, t.t[2].v, g.tex, screen)
+				int(t.p[0].x), int(t.p[0].y), t.t[0].u, t.t[0].v, t.t[0].w,
+				int(t.p[1].x), int(t.p[1].y), t.t[1].u, t.t[1].v, t.t[1].w,
+				int(t.p[2].x), int(t.p[2].y), t.t[2].u, t.t[2].v, t.t[2].w, g.tex, screen)
 
 			// drawTriangle(screen, &t)
 			trianglesDrawn++
