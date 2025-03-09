@@ -286,18 +286,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			triViewed.t[1] = triTransformed.t[1]
 			triViewed.t[2] = triTransformed.t[2]
 
-			triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].w
-			triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].w
-			triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].w
-
-			triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].w
-			triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].w
-			triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].w
-
-			triProjected.t[0].w = 1.0 / triProjected.p[0].w
-			triProjected.t[1].w = 1.0 / triProjected.p[1].w
-			triProjected.t[2].w = 1.0 / triProjected.p[2].w
-
 			// clip viewed triangle
 			clipped := [2]triangle{}
 			nClippedTriangles := triangleClipAgainstPlane(vec3d{0, 0, 0.1, 1}, vec3d{0, 0, 2.1, 1}, &triViewed, &clipped[0], &clipped[1])
@@ -310,6 +298,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				triProjected.t[0] = clipped[n].t[0]
 				triProjected.t[1] = clipped[n].t[1]
 				triProjected.t[2] = clipped[n].t[2]
+
+				triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].w
+				triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].w
+				triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].w
+
+				triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].w
+				triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].w
+				triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].w
+
+				triProjected.t[0].w = 1.0 / triProjected.p[0].w
+				triProjected.t[1].w = 1.0 / triProjected.p[1].w
+				triProjected.t[2].w = 1.0 / triProjected.p[2].w
 
 				triProjected.r = clipped[n].r
 				triProjected.g = clipped[n].g
