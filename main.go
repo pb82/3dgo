@@ -36,8 +36,8 @@ var (
 		A: 255,
 	}
 
-	w = int(256)
-	h = int(256)
+	w = int(512)
+	h = int(512)
 )
 
 type triangle struct {
@@ -241,6 +241,8 @@ func getColor(lum float64) (uint32, uint32, uint32, uint32) {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	t_start := time.Now()
+
 	screen.Fill(clearColor)
 
 	g.trianglesToRaster = nil
@@ -408,7 +410,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("%.0f FPS, %d tris", ebiten.ActualFPS(), trianglesDrawn))
+	t_duration := time.Since(t_start).Milliseconds()
+
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("%.0f FPS, %d tris, %d rt", ebiten.ActualFPS(), trianglesDrawn, t_duration))
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -528,8 +532,8 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 				tex_w = (1.0-t)*tex_sw + t*tex_ew
 
 				ww, hh := tex.Size()
-				www := float64(ww)
-				hhh := float64(hh)
+				www := float64(ww - 1)
+				hhh := float64(hh - 1)
 
 				screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
 				t += tstep
@@ -597,8 +601,8 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 				tex_w = (1.0-t)*tex_sw + t*tex_ew
 
 				ww, hh := tex.Size()
-				www := float64(ww)
-				hhh := float64(hh)
+				www := float64(ww - 1)
+				hhh := float64(hh - 1)
 
 				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
 				screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
@@ -625,7 +629,7 @@ func main() {
 
 	projectionMatrix := matrixMakeProjection(fFovRad, fAspectRatio, fNear, fFar)
 
-	img, _, _ := ebitenutil.NewImageFromFile("./wall.png")
+	img, _, _ := ebitenutil.NewImageFromFile("./ryu.png")
 
 	g := &Game{
 		mesh:         cube,
