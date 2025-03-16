@@ -11,7 +11,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -36,8 +35,8 @@ var (
 		A: 255,
 	}
 
-	w = int(512)
-	h = int(512)
+	w = int(256)
+	h = int(256)
 )
 
 type triangle struct {
@@ -87,7 +86,7 @@ func (m *mesh) LoadCube() {
 	}
 }
 
-func (m *mesh) Load(filename string) bool {
+func (m *mesh) Load(filename string, hasTexture bool) bool {
 	file, err := os.Open(filename)
 	if err != nil {
 		return false
@@ -95,6 +94,7 @@ func (m *mesh) Load(filename string) bool {
 	defer file.Close()
 
 	var vertices []vec3d
+	var texs []vec2d
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -103,29 +103,44 @@ func (m *mesh) Load(filename string) bool {
 			continue
 		}
 		if line[0] == 'v' {
-			line = line[2:]
-			parts := strings.Split(line, " ")
-			v := vec3d{}
-			v.x, _ = strconv.ParseFloat(parts[0], 64)
-			v.y, _ = strconv.ParseFloat(parts[1], 64)
-			v.z, _ = strconv.ParseFloat(parts[2], 64)
-			v.w = 1
-			vertices = append(vertices, v)
+			if line[1] == 't' {
+				v := vec2d{}
+				parts := strings.Split(line, " ")
+				v.u, _ = strconv.ParseFloat(parts[0], 64)
+				v.v, _ = strconv.ParseFloat(parts[1], 64)
+				v.w = 1
+				texs = append(texs, v)
+			} else {
+				line = line[2:]
+				parts := strings.Split(line, " ")
+				v := vec3d{}
+				v.x, _ = strconv.ParseFloat(parts[0], 64)
+				v.y, _ = strconv.ParseFloat(parts[1], 64)
+				v.z, _ = strconv.ParseFloat(parts[2], 64)
+				v.w = 1
+				vertices = append(vertices, v)
+			}
 		}
 
-		if line[0] == 'f' {
-			line = line[2:]
-			var _x int64
-			var _y int64
-			var _z int64
-			parts := strings.Split(line, " ")
-			_x, _ = strconv.ParseInt(parts[0], 10, 32)
-			_y, _ = strconv.ParseInt(parts[1], 10, 32)
-			_z, _ = strconv.ParseInt(parts[2], 10, 32)
+		if !hasTexture {
+			if line[0] == 'f' {
+				line = line[2:]
+				var _x int64
+				var _y int64
+				var _z int64
+				parts := strings.Split(line, " ")
+				_x, _ = strconv.ParseInt(parts[0], 10, 32)
+				_y, _ = strconv.ParseInt(parts[1], 10, 32)
+				_z, _ = strconv.ParseInt(parts[2], 10, 32)
 
-			m.tris = append(m.tris, triangle{
-				p: [3]vec3d{vertices[_x-1], vertices[_y-1], vertices[_z-1]},
-			})
+				m.tris = append(m.tris, triangle{
+					p: [3]vec3d{vertices[_x-1], vertices[_y-1], vertices[_z-1]},
+				})
+			}
+		} else {
+			if line[0] == 'f' {
+
+			}
 		}
 	}
 
@@ -149,6 +164,7 @@ type Game struct {
 	fYaw              float64
 	trianglesToRaster []triangle
 	tex               *ebiten.Image
+	depthBuffer       []float64
 }
 
 func (g *Game) Update() error {
@@ -244,6 +260,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	t_start := time.Now()
 
 	screen.Fill(clearColor)
+	for i := range g.depthBuffer {
+		g.depthBuffer[i] = 0
+	}
 
 	g.trianglesToRaster = nil
 
@@ -354,11 +373,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// sort triangles from back to front
-	sort.Slice(g.trianglesToRaster, func(i, j int) bool {
-		z1 := (g.trianglesToRaster[i].p[0].z + g.trianglesToRaster[i].p[1].z + g.trianglesToRaster[i].p[2].z) / 3.0
-		z2 := (g.trianglesToRaster[j].p[0].z + g.trianglesToRaster[j].p[1].z + g.trianglesToRaster[j].p[2].z) / 3.0
-		return z1 > z2
-	})
+	/*
+		sort.Slice(g.trianglesToRaster, func(i, j int) bool {
+			z1 := (g.trianglesToRaster[i].p[0].z + g.trianglesToRaster[i].p[1].z + g.trianglesToRaster[i].p[2].z) / 3.0
+			z2 := (g.trianglesToRaster[j].p[0].z + g.trianglesToRaster[j].p[1].z + g.trianglesToRaster[j].p[2].z) / 3.0
+			return z1 > z2
+		})
+	*/
 
 	trianglesDrawn := 0
 
@@ -400,7 +421,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 		for _, t := range listTriangles {
 			// drawTriangle(screen, &t)
-			texturedTriangle(
+			g.texturedTriangle(
 				int(t.p[0].x), int(t.p[0].y), t.t[0].u, t.t[0].v,
 				int(t.p[1].x), int(t.p[1].y), t.t[1].u, t.t[1].v,
 				int(t.p[2].x), int(t.p[2].y), t.t[2].u, t.t[2].v,
@@ -419,7 +440,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return w, h
 }
 
-func texturedTriangle(x1, y1 int, u1, v1 float64,
+func (g *Game) texturedTriangle(x1, y1 int, u1, v1 float64,
 	x2, y2 int, u2, v2 float64,
 	x3, y3 int, u3, v3 float64,
 	w1, w2, w3 float64,
@@ -535,7 +556,11 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 				www := float64(ww - 1)
 				hhh := float64(hh - 1)
 
-				screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+				if tex_w > g.depthBuffer[i*w+int(j)] {
+					screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+					g.depthBuffer[i*w+int(j)] = tex_w
+				}
+
 				t += tstep
 			}
 		}
@@ -605,7 +630,10 @@ func texturedTriangle(x1, y1 int, u1, v1 float64,
 				hhh := float64(hh - 1)
 
 				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
-				screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+				if tex_w > g.depthBuffer[i*w+int(j)] {
+					screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+					g.depthBuffer[i*w+int(j)] = tex_w
+				}
 
 				t += tstep
 			}
@@ -649,6 +677,7 @@ func main() {
 			z: 0,
 			w: 1,
 		},
+		depthBuffer: make([]float64, w*h),
 	}
 
 	if err := ebiten.RunGame(g); err != nil {
