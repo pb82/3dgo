@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	_ "embed"
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"image"
 	"image/color"
 	"log"
 	"math"
@@ -17,10 +20,13 @@ import (
 
 	_ "github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	_ "github.com/hajimehoshi/ebiten/v2/inpututil"
+	_ "image/png"
 )
 
 var (
 	whiteImage = ebiten.NewImage(3, 3)
+	//go:embed ryu.png
+	textureData []byte
 )
 
 func init() {
@@ -38,6 +44,36 @@ var (
 	w = int(256)
 	h = int(256)
 )
+
+type TextureAtlas interface {
+	W() int
+	H() int
+	ColorAt(x, y int) color.Color
+}
+
+type TextureAtlasImpl struct {
+	w, h int
+	img  image.Image
+}
+
+func (t *TextureAtlasImpl) W() int {
+	return t.w
+}
+
+func (t *TextureAtlasImpl) H() int {
+	return t.h
+}
+
+func (t *TextureAtlasImpl) ColorAt(x, y int) color.Color {
+	return t.img.At(x, y)
+}
+
+func (t *TextureAtlasImpl) LoadTexture() {
+	texture, _, _ := image.Decode(bytes.NewReader(textureData))
+	t.img = texture
+	t.w = texture.Bounds().Dx()
+	t.h = texture.Bounds().Dy()
+}
 
 type triangle struct {
 	p [3]vec3d
@@ -104,6 +140,7 @@ func (m *mesh) Load(filename string, hasTexture bool) bool {
 		}
 		if line[0] == 'v' {
 			if line[1] == 't' {
+				line = line[3:]
 				v := vec2d{}
 				parts := strings.Split(line, " ")
 				v.u, _ = strconv.ParseFloat(parts[0], 64)
@@ -139,7 +176,35 @@ func (m *mesh) Load(filename string, hasTexture bool) bool {
 			}
 		} else {
 			if line[0] == 'f' {
+				line = line[2:]
+				parts := strings.Split(line, " ")
+				if len(parts) == 4 {
+					pparts1 := strings.Split(parts[0], "/")
+					vertex1, _ := strconv.ParseInt(pparts1[0], 10, 32)
+					texture1, _ := strconv.ParseInt(pparts1[1], 10, 32)
 
+					pparts2 := strings.Split(parts[1], "/")
+					vertex2, _ := strconv.ParseInt(pparts2[0], 10, 32)
+					texture2, _ := strconv.ParseInt(pparts2[1], 10, 32)
+
+					pparts3 := strings.Split(parts[2], "/")
+					vertex3, _ := strconv.ParseInt(pparts3[0], 10, 32)
+					texture3, _ := strconv.ParseInt(pparts3[1], 10, 32)
+
+					pparts4 := strings.Split(parts[3], "/")
+					vertex4, _ := strconv.ParseInt(pparts4[0], 10, 32)
+					texture4, _ := strconv.ParseInt(pparts4[1], 10, 32)
+
+					m.tris = append(m.tris, triangle{
+						p: [3]vec3d{vertices[vertex1-1], vertices[vertex2-1], vertices[vertex3-1]},
+						t: [3]vec2d{texs[texture1-1], texs[texture2-1], texs[texture3-1]},
+					})
+
+					m.tris = append(m.tris, triangle{
+						p: [3]vec3d{vertices[vertex1-1], vertices[vertex3-1], vertices[vertex4-1]},
+						t: [3]vec2d{texs[texture1-1], texs[texture3-1], texs[texture4-1]},
+					})
+				}
 			}
 		}
 	}
@@ -163,7 +228,7 @@ type Game struct {
 	matView           mat4x4
 	fYaw              float64
 	trianglesToRaster []triangle
-	tex               *ebiten.Image
+	tex               TextureAtlas
 	depthBuffer       []float64
 }
 
@@ -425,8 +490,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				int(t.p[0].x), int(t.p[0].y), t.t[0].u, t.t[0].v,
 				int(t.p[1].x), int(t.p[1].y), t.t[1].u, t.t[1].v,
 				int(t.p[2].x), int(t.p[2].y), t.t[2].u, t.t[2].v,
-				t.t[0].w, t.t[1].w, t.t[2].w,
-				g.tex, screen)
+				t.t[0].w, t.t[1].w, t.t[2].w, screen)
 			trianglesDrawn++
 		}
 	}
@@ -443,8 +507,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func (g *Game) texturedTriangle(x1, y1 int, u1, v1 float64,
 	x2, y2 int, u2, v2 float64,
 	x3, y3 int, u3, v3 float64,
-	w1, w2, w3 float64,
-	tex *ebiten.Image, screen *ebiten.Image) {
+	w1, w2, w3 float64, screen *ebiten.Image) {
 
 	if y2 < y1 {
 		y1, y2 = y2, y1
@@ -552,12 +615,11 @@ func (g *Game) texturedTriangle(x1, y1 int, u1, v1 float64,
 				tex_v = (1.0-t)*tex_sv + t*tex_ev
 				tex_w = (1.0-t)*tex_sw + t*tex_ew
 
-				ww, hh := tex.Size()
-				www := float64(ww - 1)
-				hhh := float64(hh - 1)
+				www := float64(g.tex.W() - 1)
+				hhh := float64(g.tex.H() - 1)
 
 				if tex_w > g.depthBuffer[i*w+int(j)] {
-					screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+					screen.Set(int(j), i, g.tex.ColorAt(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
 					g.depthBuffer[i*w+int(j)] = tex_w
 				}
 
@@ -625,13 +687,12 @@ func (g *Game) texturedTriangle(x1, y1 int, u1, v1 float64,
 				tex_v = (1.0-t)*tex_sv + t*tex_ev
 				tex_w = (1.0-t)*tex_sw + t*tex_ew
 
-				ww, hh := tex.Size()
-				www := float64(ww - 1)
-				hhh := float64(hh - 1)
+				www := float64(g.tex.W() - 1)
+				hhh := float64(g.tex.H() - 1)
 
 				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
 				if tex_w > g.depthBuffer[i*w+int(j)] {
-					screen.Set(int(j), i, tex.RGBA64At(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+					screen.Set(int(j), i, g.tex.ColorAt(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
 					g.depthBuffer[i*w+int(j)] = tex_w
 				}
 
@@ -646,8 +707,8 @@ func main() {
 	ebiten.SetWindowTitle("3D Engine")
 
 	cube := mesh{}
-	cube.LoadCube()
-	// cube.Load("./mountains.obj")
+	// cube.LoadCube()
+	cube.Load("./export.obj", true)
 
 	fNear := float64(0.1)
 	fFar := float64(1000)
@@ -657,7 +718,8 @@ func main() {
 
 	projectionMatrix := matrixMakeProjection(fFovRad, fAspectRatio, fNear, fFar)
 
-	img, _, _ := ebitenutil.NewImageFromFile("./ryu.png")
+	textureAtlas := &TextureAtlasImpl{}
+	textureAtlas.LoadTexture()
 
 	g := &Game{
 		mesh:         cube,
@@ -670,11 +732,11 @@ func main() {
 		rotY:         matrixMakeIdentity(),
 		rotZ:         matrixMakeIdentity(),
 		trans:        matrixMakeIdentity(),
-		tex:          img,
+		tex:          textureAtlas,
 		vCamera: vec3d{
 			x: 0,
 			y: 0,
-			z: 0,
+			z: 3,
 			w: 1,
 		},
 		depthBuffer: make([]float64, w*h),
