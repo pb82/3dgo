@@ -77,7 +77,7 @@ func (t *TextureAtlasImpl) LoadTexture() {
 
 type triangle struct {
 	p [3]vec3d
-	t [3]vec2d
+	t UVs
 	r uint32
 	g uint32
 	b uint32
@@ -96,29 +96,36 @@ func (t *triangle) RGBA() (r, g, b, a uint32) {
 	return t.r, t.g, t.b, t.a
 }
 
+func (t *triangle) Scale() {
+	t.p[0].ScaleW()
+	t.p[1].ScaleW()
+	t.p[2].ScaleW()
+}
+
 type mesh struct {
 	tris []triangle
+}
+
+func (m *mesh) translateX(dx float64) {
+	for i, _ := range m.tris {
+		m.tris[i].p[0].x += dx
+		m.tris[i].p[1].x += dx
+		m.tris[i].p[2].x += dx
+	}
+}
+
+func (m *mesh) translateZ(dx float64) {
+	for i, _ := range m.tris {
+		m.tris[i].p[0].z += dx
+		m.tris[i].p[1].z += dx
+		m.tris[i].p[2].z += dx
+	}
 }
 
 func (m *mesh) LoadCube() {
 	m.tris = []triangle{
 		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {0.0, 1.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
 		{p: [3]vec3d{{0.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
-
-		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
-		{p: [3]vec3d{{1.0, 0.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
-
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
-
-		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
-		{p: [3]vec3d{{0.0, 0.0, 1.0, 1}, {0.0, 1.0, 0.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
-
-		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {0.0, 1.0, 1.0, 1}, {1.0, 1.0, 1.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
-		{p: [3]vec3d{{0.0, 1.0, 0.0, 1}, {1.0, 1.0, 1.0, 1}, {1.0, 1.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
-
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {0, 0, 1}, {1, 0, 1}}},
-		{p: [3]vec3d{{1.0, 0.0, 1.0, 1}, {0.0, 0.0, 0.0, 1}, {1.0, 0.0, 0.0, 1}}, t: [3]vec2d{{0, 1, 1}, {1, 0, 1}, {1, 1, 1}}},
 	}
 }
 
@@ -204,6 +211,23 @@ func (m *mesh) Load(filename string, hasTexture bool) bool {
 						p: [3]vec3d{vertices[vertex1-1], vertices[vertex3-1], vertices[vertex4-1]},
 						t: [3]vec2d{texs[texture1-1], texs[texture3-1], texs[texture4-1]},
 					})
+				} else if len(parts) == 3 {
+					pparts1 := strings.Split(parts[0], "/")
+					vertex1, _ := strconv.ParseInt(pparts1[0], 10, 32)
+					texture1, _ := strconv.ParseInt(pparts1[1], 10, 32)
+
+					pparts2 := strings.Split(parts[1], "/")
+					vertex2, _ := strconv.ParseInt(pparts2[0], 10, 32)
+					texture2, _ := strconv.ParseInt(pparts2[1], 10, 32)
+
+					pparts3 := strings.Split(parts[2], "/")
+					vertex3, _ := strconv.ParseInt(pparts3[0], 10, 32)
+					texture3, _ := strconv.ParseInt(pparts3[1], 10, 32)
+
+					m.tris = append(m.tris, triangle{
+						p: [3]vec3d{vertices[vertex1-1], vertices[vertex2-1], vertices[vertex3-1]},
+						t: [3]vec2d{texs[texture1-1], texs[texture2-1], texs[texture3-1]},
+					})
 				}
 			}
 		}
@@ -220,7 +244,6 @@ type Game struct {
 	elapsedTime       float64
 	fTheta            float64
 	vCamera           vec3d
-	vLookDirection    vec3d
 	rotX              mat4x4
 	rotY              mat4x4
 	rotZ              mat4x4
@@ -240,30 +263,35 @@ func (g *Game) Update() error {
 
 	msPassed := delta / 1000
 
-	// g.fTheta = 1.0 * (g.elapsedTime / 1000)
+	// g.mesh.translateZ(0.01)
+	g.fTheta = 1.0 * (g.elapsedTime / 1000)
 
-	g.rotZ.rotateZ(g.fTheta)
-	g.rotX.rotateX(g.fTheta)
+	// g.rotZ.rotateZ(g.fTheta)
+	// g.rotX.rotateX(g.fTheta)
+	// g.rotY.rotateY(g.fTheta)
 	g.trans.translate(0, 0, 5)
 
 	g.matWorld = matrixMakeIdentity()
-	g.matWorld = g.matWorld.multiplyMatrix(&g.rotZ)
 	g.matWorld = g.matWorld.multiplyMatrix(&g.rotX)
+	g.matWorld = g.matWorld.multiplyMatrix(&g.rotY)
+	g.matWorld = g.matWorld.multiplyMatrix(&g.rotZ)
 	g.matWorld = g.matWorld.multiplyMatrix(&g.trans)
 
-	up := vec3d{0, 1, 0, 1}
-	target := vec3d{0, 0, 1, 1}
+	up := vec3d{0, 1, 0, 0}
+	target := vec3d{0, 0, 1, 0}
 
 	matCameraRot := matrixMakeIdentity()
 	matCameraRot.rotateY(g.fYaw)
 
-	g.vLookDirection = matCameraRot.matrixMultiplyVector(&target)
-	target = g.vCamera.Add(&g.vLookDirection)
+	vLookDirection := matCameraRot.matrixMultiplyVector(&target)
 
-	camera := matrixPointAt(&g.vCamera, &target, &up)
+	target = g.vCamera.Add(&vLookDirection)
+
+	camera := matrixMakeIdentity()
+	camera.pointAt(&g.vCamera, &target, &up)
 	g.matView = matrixQuickInverse(&camera)
 
-	vForward := g.vLookDirection.Mul(8 * msPassed)
+	vForward := vLookDirection.Mul(8 * msPassed)
 
 	keys := inpututil.AppendPressedKeys([]ebiten.Key{ebiten.KeyUp, ebiten.KeyDown, ebiten.KeyLeft, ebiten.KeyRight})
 	for _, key := range keys {
@@ -321,6 +349,14 @@ func getColor(lum float64) (uint32, uint32, uint32, uint32) {
 	return uint32(v), uint32(v), uint32(v), math.MaxUint32
 }
 
+func TNormal(t *triangle) vec3d {
+	line1 := t.p[1].Sub(&t.p[0])
+	line2 := t.p[2].Sub(&t.p[0])
+	normal := line1.CrossProduct(&line2)
+	normal.Normalize()
+	return normal
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
 	t_start := time.Now()
 
@@ -340,22 +376,17 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		triTransformed.p[0] = g.matWorld.matrixMultiplyVector(&t.p[0])
 		triTransformed.p[1] = g.matWorld.matrixMultiplyVector(&t.p[1])
 		triTransformed.p[2] = g.matWorld.matrixMultiplyVector(&t.p[2])
-		triTransformed.t[0] = t.t[0]
-		triTransformed.t[1] = t.t[1]
-		triTransformed.t[2] = t.t[2]
+		triTransformed.t = t.t.Copy()
 
 		// NORMAL
-		line1 := triTransformed.p[1].Sub(&triTransformed.p[0])
-		line2 := triTransformed.p[2].Sub(&triTransformed.p[0])
-		normal := line1.CrossProduct(&line2)
-		normal = *normal.Normalize()
+		normal := TNormal(&triTransformed)
 
 		vCameraRay := triTransformed.p[0].Sub(&g.vCamera)
+		dp := normal.DotProduct(&vCameraRay)
 
-		if normal.DotProduct(&vCameraRay) < 0.0 {
-
+		if dp < 0 {
 			light_direction := vec3d{0, 1, -1, 1}
-			light_direction = *light_direction.Normalize()
+			light_direction.Normalize()
 
 			// dp := normal.x*light_direction.x + normal.y*light_direction.y + normal.z*light_direction.z
 
@@ -368,9 +399,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			triViewed.p[0] = g.matView.matrixMultiplyVector(&triTransformed.p[0])
 			triViewed.p[1] = g.matView.matrixMultiplyVector(&triTransformed.p[1])
 			triViewed.p[2] = g.matView.matrixMultiplyVector(&triTransformed.p[2])
-			triViewed.t[0] = triTransformed.t[0]
-			triViewed.t[1] = triTransformed.t[1]
-			triViewed.t[2] = triTransformed.t[2]
+			triViewed.t = triTransformed.t.Copy()
 
 			// clip viewed triangle
 			clipped := [2]triangle{}
@@ -385,26 +414,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				triProjected.t[1] = clipped[n].t[1]
 				triProjected.t[2] = clipped[n].t[2]
 
-				triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].w
-				triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].w
-				triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].w
-
-				triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].w
-				triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].w
-				triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].w
-
-				triProjected.t[0].w = 1.0 / triProjected.p[0].w
-				triProjected.t[1].w = 1.0 / triProjected.p[1].w
-				triProjected.t[2].w = 1.0 / triProjected.p[2].w
+				triProjected.t.Scale(&triProjected)
 
 				triProjected.r = clipped[n].r
 				triProjected.g = clipped[n].g
 				triProjected.b = clipped[n].b
 				triProjected.a = clipped[n].a
 
-				triProjected.p[0] = triProjected.p[0].Div(triProjected.p[0].w)
-				triProjected.p[1] = triProjected.p[1].Div(triProjected.p[1].w)
-				triProjected.p[2] = triProjected.p[2].Div(triProjected.p[2].w)
+				triProjected.Scale()
 
 				// X/Y are inverted so put them back
 				triProjected.p[0].x *= -1.0
@@ -484,6 +501,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			}
 			newTriangles = len(listTriangles)
 		}
+
 		for _, t := range listTriangles {
 			// drawTriangle(screen, &t)
 			g.texturedTriangle(
@@ -619,7 +637,7 @@ func (g *Game) texturedTriangle(x1, y1 int, u1, v1 float64,
 				hhh := float64(g.tex.H() - 1)
 
 				if tex_w > g.depthBuffer[i*w+int(j)] {
-					screen.Set(int(j), i, g.tex.ColorAt(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+					screen.Set(int(j), i, g.tex.ColorAt(int((tex_u/tex_w)*www), int((1-tex_v/tex_w)*hhh)))
 					g.depthBuffer[i*w+int(j)] = tex_w
 				}
 
@@ -692,7 +710,7 @@ func (g *Game) texturedTriangle(x1, y1 int, u1, v1 float64,
 
 				// Draw(j, i, tex->SampleGlyph(tex_u / tex_w, tex_v / tex_w), tex->SampleColour(tex_u / tex_w, tex_v / tex_w));
 				if tex_w > g.depthBuffer[i*w+int(j)] {
-					screen.Set(int(j), i, g.tex.ColorAt(int((tex_u/tex_w)*www), int((tex_v/tex_w)*hhh)))
+					screen.Set(int(j), i, g.tex.ColorAt(int((tex_u/tex_w)*www), int((1-tex_v/tex_w)*hhh)))
 					g.depthBuffer[i*w+int(j)] = tex_w
 				}
 
@@ -707,8 +725,8 @@ func main() {
 	ebiten.SetWindowTitle("3D Engine")
 
 	cube := mesh{}
-	// cube.LoadCube()
-	cube.Load("./export.obj", true)
+	cube.LoadCube()
+	// cube.Load("./cube4.obj", true)
 
 	fNear := float64(0.1)
 	fFar := float64(1000)
@@ -732,11 +750,12 @@ func main() {
 		rotY:         matrixMakeIdentity(),
 		rotZ:         matrixMakeIdentity(),
 		trans:        matrixMakeIdentity(),
+		matView:      matrixMakeIdentity(),
 		tex:          textureAtlas,
 		vCamera: vec3d{
-			x: 0,
-			y: 0,
-			z: 3,
+			x: 0.5,
+			y: 0.5,
+			z: 4.5,
 			w: 1,
 		},
 		depthBuffer: make([]float64, w*h),

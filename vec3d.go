@@ -8,8 +8,36 @@ type vec2d struct {
 	u, v, w float64
 }
 
+type UVs [3]vec2d
+
+func (u *UVs) Copy() UVs {
+	return UVs{
+		u[0],
+		u[1],
+		u[2],
+	}
+}
+
+func (u *UVs) Scale(t *triangle) {
+	for n := 0; n < len(u); n++ {
+		u[n].u = u[n].u / t.p[n].w
+		u[n].v = u[n].v / t.p[n].w
+		u[n].w = 1 / t.p[n].w
+	}
+}
+
+func (v *vec2d) Copy() vec2d {
+	return vec2d{
+		v.u, v.v, v.w,
+	}
+}
+
 type vec3d struct {
 	x, y, z, w float64
+}
+
+func (v *vec3d) ScaleW() {
+	*v = v.Div(v.w)
 }
 
 func (v *vec3d) Add(v2 *vec3d) vec3d {
@@ -56,26 +84,32 @@ func (v *vec3d) Length() float64 {
 	return math.Sqrt(v.x*v.x + v.y*v.y + v.z*v.z)
 }
 
-func (v *vec3d) Normalize() *vec3d {
+func (v *vec3d) Normalize() {
 	l := v.Length()
-	return &vec3d{
-		x: v.x / l,
-		y: v.y / l,
-		z: v.z / l,
-		w: v.w,
-	}
+	/*
+		return &vec3d{
+			x: v.x / l,
+			y: v.y / l,
+			z: v.z / l,
+			w: v.w,
+		}
+	*/
+	v.x /= l
+	v.y /= l
+	v.z /= l
 }
 
 func (v1 *vec3d) CrossProduct(v2 *vec3d) vec3d {
-	v := vec3d{}
-	v.x = v1.y*v2.z - v1.z*v2.y
-	v.y = v1.z*v2.x - v1.x*v2.z
-	v.z = v1.x*v2.y - v1.y*v2.x
-	return v
+	return vec3d{
+		x: v1.y*v2.z - v1.z*v2.y,
+		y: v1.z*v2.x - v1.x*v2.z,
+		z: v1.x*v2.y - v1.y*v2.x,
+		w: v1.w,
+	}
 }
 
 func vectorIntersectPlane(plane_p, plane_n, line_start, line_end *vec3d, t *float64) vec3d {
-	plane_n = plane_n.Normalize()
+	plane_n.Normalize()
 	plane_d := -plane_n.DotProduct(plane_p)
 	ad := line_start.DotProduct(plane_n)
 	bd := line_end.DotProduct(plane_n)
@@ -86,7 +120,7 @@ func vectorIntersectPlane(plane_p, plane_n, line_start, line_end *vec3d, t *floa
 }
 
 func triangleClipAgainstPlane(plane_p, plane_n vec3d, in_tri, out_tri1, out_tri2 *triangle) int {
-	plane_n = *plane_n.Normalize()
+	plane_n.Normalize()
 
 	dist := func(p *vec3d) float64 {
 		// n := p.Normalize()

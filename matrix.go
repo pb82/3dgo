@@ -1,6 +1,8 @@
 package main
 
-import "math"
+import (
+	"math"
+)
 
 type mat4x4 struct {
 	m [4][4]float64
@@ -29,10 +31,12 @@ func makeMatrix() mat4x4 {
 
 func (m *mat4x4) matrixMultiplyVector(i *vec3d) vec3d {
 	v := vec3d{}
+
 	v.x = i.x*m.m[0][0] + i.y*m.m[1][0] + i.z*m.m[2][0] + i.w*m.m[3][0]
 	v.y = i.x*m.m[0][1] + i.y*m.m[1][1] + i.z*m.m[2][1] + i.w*m.m[3][1]
 	v.z = i.x*m.m[0][2] + i.y*m.m[1][2] + i.z*m.m[2][2] + i.w*m.m[3][2]
 	v.w = i.x*m.m[0][3] + i.y*m.m[1][3] + i.z*m.m[2][3] + i.w*m.m[3][3]
+
 	return v
 }
 
@@ -93,34 +97,31 @@ func matrixMakeProjection(fFovRad, fAspectRatio, fNear, fFar float64) mat4x4 {
 	return matrix
 }
 
-func matrixPointAt(pos, target, up *vec3d) mat4x4 {
+func (m *mat4x4) pointAt(pos, target, up *vec3d) {
 	newForward := target.Sub(pos)
-	newForward = *newForward.Normalize()
+	newForward.Normalize()
 
 	a := newForward.Mul(up.DotProduct(&newForward))
 	newUp := up.Sub(&a)
-	newUp = *newUp.Normalize()
+	newUp.Normalize()
 
 	newRight := newUp.CrossProduct(&newForward)
-
-	matrix := mat4x4{}
-	matrix.m[0][0] = newRight.x
-	matrix.m[0][1] = newRight.y
-	matrix.m[0][2] = newRight.z
-	matrix.m[0][3] = 0.0
-	matrix.m[1][0] = newUp.x
-	matrix.m[1][1] = newUp.y
-	matrix.m[1][2] = newUp.z
-	matrix.m[1][3] = 0.0
-	matrix.m[2][0] = newForward.x
-	matrix.m[2][1] = newForward.y
-	matrix.m[2][2] = newForward.z
-	matrix.m[2][3] = 0.0
-	matrix.m[3][0] = pos.x
-	matrix.m[3][1] = pos.y
-	matrix.m[3][2] = pos.z
-	matrix.m[3][3] = 1.0
-	return matrix
+	m.m[0][0] = newRight.x
+	m.m[0][1] = newRight.y
+	m.m[0][2] = newRight.z
+	m.m[0][3] = 0.0
+	m.m[1][0] = newUp.x
+	m.m[1][1] = newUp.y
+	m.m[1][2] = newUp.z
+	m.m[1][3] = 0.0
+	m.m[2][0] = newForward.x
+	m.m[2][1] = newForward.y
+	m.m[2][2] = newForward.z
+	m.m[2][3] = 0.0
+	m.m[3][0] = pos.x
+	m.m[3][1] = pos.y
+	m.m[3][2] = pos.z
+	m.m[3][3] = 1.0
 }
 
 func matrixQuickInverse(m *mat4x4) mat4x4 {
